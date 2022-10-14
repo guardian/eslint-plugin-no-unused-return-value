@@ -20,7 +20,7 @@ const createRule = ESLintUtils.RuleCreator(
 
 const isFunctionCalled = (ref: Reference): boolean =>
 	ref.identifier.type === AST_NODE_TYPES.Identifier &&
-	ref.identifier.parent.type === AST_NODE_TYPES.CallExpression;
+	ref.identifier.parent?.type === AST_NODE_TYPES.CallExpression;
 
 const getCallExpression = (ref: Reference): CallExpression | undefined => {
 	if (isFunctionCalled(ref)) {
@@ -31,8 +31,8 @@ const getCallExpression = (ref: Reference): CallExpression | undefined => {
 const isReturnValueUsed = (callExpr: CallExpression): boolean => {
 	console.log(callExpr);
 	return (
-		callExpr.parent.type === AST_NODE_TYPES.VariableDeclarator ||
-		callExpr.parent.type === AST_NODE_TYPES.ReturnStatement
+		callExpr.parent?.type === AST_NODE_TYPES.VariableDeclarator ||
+		callExpr.parent?.type === AST_NODE_TYPES.ReturnStatement
 	);
 };
 
@@ -44,8 +44,10 @@ const hasNonVoidReturnType = (
 		| TSEmptyBodyFunctionExpression,
 ): boolean =>
 	// If no returnType is declared then we cannot run this rule
-	node.returnType &&
-	node.returnType.typeAnnotation.type !== AST_NODE_TYPES.TSVoidKeyword;
+	!!(
+		node.returnType &&
+		node.returnType.typeAnnotation.type !== AST_NODE_TYPES.TSVoidKeyword
+	);
 
 export const rule = createRule({
 	create(context) {
@@ -54,25 +56,27 @@ export const rule = createRule({
 
 			scope.references.map((ref) => {
 				// TODO - why is defs an array?
-				const functions = ref.resolved.defs.filter(
-					(def) => def.type === DefinitionType.FunctionName,
-				) as FunctionNameDefinition[];
+				if (ref.resolved) {
+					const functions = ref.resolved.defs.filter(
+						(def) => def.type === DefinitionType.FunctionName,
+					) as FunctionNameDefinition[];
 
-				functions.forEach((fun) => {
-					const nonVoid = hasNonVoidReturnType(fun.node);
-					if (nonVoid) {
-						const maybeCallExpression = getCallExpression(ref);
-						if (
-							maybeCallExpression &&
-							!isReturnValueUsed(maybeCallExpression)
-						) {
-							context.report({
-								messageId: 'unused',
-								node: ref.identifier,
-							});
+					functions.forEach((fun) => {
+						const nonVoid = hasNonVoidReturnType(fun.node);
+						if (nonVoid) {
+							const maybeCallExpression = getCallExpression(ref);
+							if (
+								maybeCallExpression &&
+								!isReturnValueUsed(maybeCallExpression)
+							) {
+								context.report({
+									messageId: 'unused',
+									node: ref.identifier,
+								});
+							}
 						}
-					}
-				});
+					});
+				}
 			});
 		};
 

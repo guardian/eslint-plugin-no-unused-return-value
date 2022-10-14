@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Eslint rule to catch unused function return values",
   "scripts": {
+    "tsc": "tsc --noEmit",
     "test": "jest"
   },
   "main": "dist/index.js",
