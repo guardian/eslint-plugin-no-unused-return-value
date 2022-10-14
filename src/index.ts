@@ -1,8 +1,7 @@
 import { rule } from './rule';
 
-
 const configuration = {
-    rules: [rule],
+	rules: [rule],
 };
 
 export = configuration;
