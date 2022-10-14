@@ -4,7 +4,8 @@
   "description": "Eslint rule to catch unused function return values",
   "scripts": {
     "tsc": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "lint": "yarn prettier -w src/**/*.ts"
   },
   "main": "dist/index.js",
   "types": "index.d.ts",

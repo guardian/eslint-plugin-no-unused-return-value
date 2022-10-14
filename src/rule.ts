@@ -29,20 +29,19 @@ const getCallExpression = (ref: Reference): CallExpression | undefined => {
 };
 
 const isReturnValueUsed = (callExpr: CallExpression): boolean => {
-	console.log(callExpr);
 	return (
 		callExpr.parent?.type === AST_NODE_TYPES.VariableDeclarator ||
 		callExpr.parent?.type === AST_NODE_TYPES.ReturnStatement
 	);
 };
 
-const hasNonVoidReturnType = (
-	node:
-		| FunctionDeclaration
-		| FunctionExpression
-		| TSDeclareFunction
-		| TSEmptyBodyFunctionExpression,
-): boolean =>
+type FunctionNode =
+	| FunctionDeclaration
+	| FunctionExpression
+	| TSDeclareFunction
+	| TSEmptyBodyFunctionExpression;
+
+const hasNonVoidReturnType = (node: FunctionNode): boolean =>
 	// If no returnType is declared then we cannot run this rule
 	!!(
 		node.returnType &&
@@ -55,7 +54,6 @@ export const rule = createRule({
 			scope.childScopes.forEach((childScope) => traverseScope(childScope));
 
 			scope.references.map((ref) => {
-				// TODO - why is defs an array?
 				if (ref.resolved) {
 					const functions = ref.resolved.defs.filter(
 						(def) => def.type === DefinitionType.FunctionName,

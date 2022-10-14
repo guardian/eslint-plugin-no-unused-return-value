@@ -6,6 +6,9 @@ const ruleTester = new ESLintUtils.RuleTester({
 });
 
 /**
+ * let f = foo();
+ *
+ * Becomes -
  * [ -VariableDeclaration
  *   let [ -VariableDeclarator
  *     f = [ -CallExpression
