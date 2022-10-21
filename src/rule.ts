@@ -6,13 +6,14 @@ import {
 	FunctionExpression,
 	TSDeclareFunction,
 	TSEmptyBodyFunctionExpression,
+	ArrowFunctionExpression,
 } from '@typescript-eslint/types/dist/generated/ast-spec';
 import {
 	DefinitionType,
-	FunctionNameDefinition,
 	Reference,
 	Scope,
 } from '@typescript-eslint/scope-manager';
+import {collect} from "./utils/collect";
 
 const createRule = ESLintUtils.RuleCreator(
 	(name) => `https://example.com/rule/${name}`,
@@ -39,7 +40,8 @@ type FunctionNode =
 	| FunctionDeclaration
 	| FunctionExpression
 	| TSDeclareFunction
-	| TSEmptyBodyFunctionExpression;
+	| TSEmptyBodyFunctionExpression
+	| ArrowFunctionExpression;
 
 const hasNonVoidReturnType = (node: FunctionNode): boolean =>
 	// If no returnType is declared then we cannot run this rule
@@ -55,12 +57,25 @@ export const rule = createRule({
 
 			scope.references.map((ref) => {
 				if (ref.resolved) {
-					const functions = ref.resolved.defs.filter(
-						(def) => def.type === DefinitionType.FunctionName,
-					) as FunctionNameDefinition[];
+					const namedFunctions: FunctionNode[] = collect(ref.resolved.defs, def => {
+						if (def.type === DefinitionType.FunctionName) {
+							return def.node;
+						}
+					});
 
-					functions.forEach((fun) => {
-						const nonVoid = hasNonVoidReturnType(fun.node);
+					const arrowFunctions: FunctionNode[] = collect(
+						ref.resolved.defs,
+						def => {
+							if (def.node.type === AST_NODE_TYPES.VariableDeclarator &&
+								def.node.init &&
+								def.node.init.type === AST_NODE_TYPES.ArrowFunctionExpression) {
+								return def.node.init;
+							}
+						}
+					);
+
+					[...namedFunctions, ...arrowFunctions].forEach((functionNode) => {
+						const nonVoid = hasNonVoidReturnType(functionNode);
 						if (nonVoid) {
 							const maybeCallExpression = getCallExpression(ref);
 							if (
