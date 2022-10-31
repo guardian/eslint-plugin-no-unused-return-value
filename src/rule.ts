@@ -78,6 +78,7 @@ export const rule = createRule({
 						functionNode => hasNonVoidReturnType(functionNode)
 					);
 
+					// We'd only expect nonVoidReturnFunctions to have 0 or 1 elements at this point
 					if (nonVoidReturnFunctions.length > 0) {
 						const maybeCallExpression = getCallExpression(ref);
 						if (
