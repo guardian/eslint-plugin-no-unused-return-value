@@ -53,6 +53,14 @@ ruleTester.run('rule', rule, {
             `,
 			options: [],
 		},
+		{
+			name: 'Arrow function assigned to a const, then called, with return value assigned to a variable',
+			code: `
+            const foo = (): number => { return 1 };
+            let f = foo()
+            `,
+			options: [],
+		},
 	],
 	invalid: [
 		{
@@ -71,6 +79,14 @@ ruleTester.run('rule', rule, {
                 foo();
                 return 1;
             }
+            `,
+			errors: [{ messageId: 'unused' }],
+		},
+		{
+			name: 'Arrow function assigned to a const, then called and return value ignored',
+			code: `
+            const foo = (): number => { return 1 };
+            foo()
             `,
 			errors: [{ messageId: 'unused' }],
 		},

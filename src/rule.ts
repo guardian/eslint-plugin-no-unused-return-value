@@ -6,13 +6,14 @@ import {
 	FunctionExpression,
 	TSDeclareFunction,
 	TSEmptyBodyFunctionExpression,
+	ArrowFunctionExpression,
 } from '@typescript-eslint/types/dist/generated/ast-spec';
 import {
 	DefinitionType,
-	FunctionNameDefinition,
 	Reference,
 	Scope,
 } from '@typescript-eslint/scope-manager';
+import {collect} from "./utils/collect";
 
 const createRule = ESLintUtils.RuleCreator(
 	(name) => `https://example.com/rule/${name}`,
@@ -39,7 +40,8 @@ type FunctionNode =
 	| FunctionDeclaration
 	| FunctionExpression
 	| TSDeclareFunction
-	| TSEmptyBodyFunctionExpression;
+	| TSEmptyBodyFunctionExpression
+	| ArrowFunctionExpression;
 
 const hasNonVoidReturnType = (node: FunctionNode): boolean =>
 	// If no returnType is declared then we cannot run this rule
@@ -55,25 +57,40 @@ export const rule = createRule({
 
 			scope.references.map((ref) => {
 				if (ref.resolved) {
-					const functions = ref.resolved.defs.filter(
-						(def) => def.type === DefinitionType.FunctionName,
-					) as FunctionNameDefinition[];
-
-					functions.forEach((fun) => {
-						const nonVoid = hasNonVoidReturnType(fun.node);
-						if (nonVoid) {
-							const maybeCallExpression = getCallExpression(ref);
-							if (
-								maybeCallExpression &&
-								!isReturnValueUsed(maybeCallExpression)
-							) {
-								context.report({
-									messageId: 'unused',
-									node: ref.identifier,
-								});
-							}
+					const namedFunctions: FunctionNode[] = collect(ref.resolved.defs, def => {
+						if (def.type === DefinitionType.FunctionName) {
+							return def.node;
 						}
 					});
+
+					const arrowFunctions: FunctionNode[] = collect(
+						ref.resolved.defs,
+						def => {
+							if (def.node.type === AST_NODE_TYPES.VariableDeclarator &&
+								def.node.init &&
+								def.node.init.type === AST_NODE_TYPES.ArrowFunctionExpression) {
+								return def.node.init;
+							}
+						}
+					);
+
+					const nonVoidReturnFunctions = [...namedFunctions, ...arrowFunctions].filter(
+						functionNode => hasNonVoidReturnType(functionNode)
+					);
+
+					// We'd only expect nonVoidReturnFunctions to have 0 or 1 elements at this point
+					if (nonVoidReturnFunctions.length > 0) {
+						const maybeCallExpression = getCallExpression(ref);
+						if (
+							maybeCallExpression &&
+							!isReturnValueUsed(maybeCallExpression)
+						) {
+							context.report({
+								messageId: 'unused',
+								node: ref.identifier,
+							});
+						}
+					}
 				}
 			});
 		};
