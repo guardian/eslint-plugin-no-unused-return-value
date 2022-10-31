@@ -74,21 +74,22 @@ export const rule = createRule({
 						}
 					);
 
-					[...namedFunctions, ...arrowFunctions].forEach((functionNode) => {
-						const nonVoid = hasNonVoidReturnType(functionNode);
-						if (nonVoid) {
-							const maybeCallExpression = getCallExpression(ref);
-							if (
-								maybeCallExpression &&
-								!isReturnValueUsed(maybeCallExpression)
-							) {
-								context.report({
-									messageId: 'unused',
-									node: ref.identifier,
-								});
-							}
+					const nonVoidReturnFunctions = [...namedFunctions, ...arrowFunctions].filter(
+						functionNode => hasNonVoidReturnType(functionNode)
+					);
+
+					if (nonVoidReturnFunctions.length > 0) {
+						const maybeCallExpression = getCallExpression(ref);
+						if (
+							maybeCallExpression &&
+							!isReturnValueUsed(maybeCallExpression)
+						) {
+							context.report({
+								messageId: 'unused',
+								node: ref.identifier,
+							});
 						}
-					});
+					}
 				}
 			});
 		};
