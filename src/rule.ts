@@ -10,7 +10,6 @@ import {
 	Node,
 } from '@typescript-eslint/types/dist/generated/ast-spec';
 import {
-	DefinitionType,
 	Reference,
 	Scope,
 } from '@typescript-eslint/scope-manager';
@@ -62,7 +61,7 @@ export const rule = createRule({
 			scope.references.map((ref) => {
 				if (ref.resolved) {
 					const namedFunctions: FunctionNode[] = collect(ref.resolved.defs, def => {
-						if (def.type === DefinitionType.FunctionName) {
+						if (isFunctionNode(def.node)) {
 							return def.node;
 						}
 					});
