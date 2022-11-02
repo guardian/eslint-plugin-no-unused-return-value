@@ -7,6 +7,7 @@ import {
 	TSDeclareFunction,
 	TSEmptyBodyFunctionExpression,
 	ArrowFunctionExpression,
+	Node,
 } from '@typescript-eslint/types/dist/generated/ast-spec';
 import {
 	DefinitionType,
@@ -42,6 +43,9 @@ type FunctionNode =
 	| TSDeclareFunction
 	| TSEmptyBodyFunctionExpression
 	| ArrowFunctionExpression;
+const functionNodeTypes = [AST_NODE_TYPES.FunctionDeclaration, AST_NODE_TYPES.FunctionExpression, AST_NODE_TYPES.TSDeclareFunction, AST_NODE_TYPES.TSEmptyBodyFunctionExpression, AST_NODE_TYPES.TSEmptyBodyFunctionExpression, AST_NODE_TYPES.ArrowFunctionExpression];
+const isFunctionNode = (node: Node): node is FunctionNode =>
+	functionNodeTypes.includes(node.type);
 
 const hasNonVoidReturnType = (node: FunctionNode): boolean =>
 	// If no returnType is declared then we cannot run this rule
@@ -63,18 +67,19 @@ export const rule = createRule({
 						}
 					});
 
-					const arrowFunctions: FunctionNode[] = collect(
+					// Functions assigned to variables
+					const functionExpressions: FunctionNode[] = collect(
 						ref.resolved.defs,
 						def => {
 							if (def.node.type === AST_NODE_TYPES.VariableDeclarator &&
 								def.node.init &&
-								def.node.init.type === AST_NODE_TYPES.ArrowFunctionExpression) {
+								isFunctionNode(def.node.init)) {
 								return def.node.init;
 							}
 						}
 					);
 
-					const nonVoidReturnFunctions = [...namedFunctions, ...arrowFunctions].filter(
+					const nonVoidReturnFunctions = [...namedFunctions, ...functionExpressions].filter(
 						functionNode => hasNonVoidReturnType(functionNode)
 					);
 
