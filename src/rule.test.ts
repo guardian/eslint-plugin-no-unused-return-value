@@ -69,6 +69,15 @@ ruleTester.run('rule', rule, {
             `,
 			options: [],
 		},
+		{
+			name: 'Function receives a function, calls it, and returns the result',
+			code: `
+			function foo(f: () => number): number {
+			  return f()
+			}
+            `,
+			options: [],
+		}
 	],
 	invalid: [
 		{
@@ -103,6 +112,15 @@ ruleTester.run('rule', rule, {
 			code: `
 			const foo = function(): number { return 1 }
             foo()
+            `,
+			errors: [{ messageId: 'unused' }],
+		},
+		{
+			name: 'Function receives a function, calls it, but ignores the return value',
+			code: `
+			function foo(f: () => number): void {
+			  f()
+			}
             `,
 			errors: [{ messageId: 'unused' }],
 		},
