@@ -1,7 +1,6 @@
-import {ESLintUtils} from '@typescript-eslint/utils';
+import {AST_NODE_TYPES, ESLintUtils} from '@typescript-eslint/utils';
 import {
 	ArrowFunctionExpression,
-	AST_NODE_TYPES,
 	CallExpression,
 	FunctionDeclaration,
 	FunctionExpression,
@@ -26,12 +25,13 @@ const getCallExpression = (ref: Reference): CallExpression | undefined => {
 	}
 };
 
-const isReturnValueUsed = (callExpr: CallExpression): boolean => {
-	return (
-		callExpr.parent?.type === AST_NODE_TYPES.VariableDeclarator ||
-		callExpr.parent?.type === AST_NODE_TYPES.ReturnStatement
-	);
-};
+const validUsageNodeTypes: AST_NODE_TYPES[] = [AST_NODE_TYPES.VariableDeclarator, AST_NODE_TYPES.ReturnStatement, AST_NODE_TYPES.BinaryExpression, AST_NODE_TYPES.TemplateLiteral, AST_NODE_TYPES.ArrowFunctionExpression, AST_NODE_TYPES.MemberExpression];
+const isValidUsageNodeType = (type: AST_NODE_TYPES | undefined) => !!type && validUsageNodeTypes.includes(type);
+const isReturnValueUsed = (callExpr: CallExpression): boolean =>
+	callExpr.callee.type !== AST_NODE_TYPES.Identifier ||
+	// If callee is Identifier, check the parent is valid:
+	isValidUsageNodeType(callExpr.parent?.type) ||
+	(callExpr.parent?.type === AST_NODE_TYPES.AwaitExpression && isValidUsageNodeType(callExpr.parent?.parent?.type));
 
 type FunctionNode =
 	| FunctionDeclaration
