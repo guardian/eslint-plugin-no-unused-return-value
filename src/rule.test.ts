@@ -119,10 +119,10 @@ ruleTester.run('rule', rule, {
 			options: [],
 		},
 		{
-			name: 'Call Promise.then on result of async function and return the result',
+			name: 'Call Promise.then on result of async function',
 			code: `
-			function foo(f: () => Promise<number>): Promise<number> {
-			  return f().then(n => n*2);
+			function foo(f: () => Promise<number>): void {
+			  f().then(n => console.log(n))
 			}
 		    `,
 			options: [],
