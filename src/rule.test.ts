@@ -44,6 +44,14 @@ ruleTester.run('rule', rule, {
 			options: [],
 		},
 		{
+			name: 'Function is called in an expression, the result of which is assigned to variable',
+			code: `
+			function foo(): number { return 1 };
+		    let f = 1 + foo()
+            `,
+			options: [],
+		},
+		{
 			name: 'Function called and return value returned inline',
 			code: `
             function foo(): number { return 1 };
@@ -77,7 +85,64 @@ ruleTester.run('rule', rule, {
 			}
             `,
 			options: [],
-		}
+		},
+		{
+			name: 'Function passed to Array.map',
+			code: `
+			const double = (n: number): number => n*2;
+			[1,2].map(double);
+		    `,
+			options: [],
+		},
+		{
+			name: 'Function called by a function passed to Array.map',
+			code: `
+			const double = (n: number): number => n*2;
+			[1,2].map(n => double(n));
+		    `,
+			options: [],
+		},
+		{
+			name: 'Function called in an expression by a function passed to Array.map',
+			code: `
+			const double = (n: number): number => n*2;
+			[1,2].map(n => 1 + double(n));
+		    `,
+			options: [],
+		},
+		{
+			name: 'Async function is awaited and result assigned to variable',
+			code: `
+			const foo = (): Promise<number> => Promise.resolve(1);
+			let f = await foo()
+		    `,
+			options: [],
+		},
+		{
+			name: 'Call Promise.then on result of async function',
+			code: `
+			function foo(f: () => Promise<number>): void {
+			  f().then(n => console.log(n))
+			}
+		    `,
+			options: [],
+		},
+		{
+			name: 'String interpolation with function call',
+			code: `
+			const foo = (): string => 'blah';
+			let f = \`bleh \${foo()} bleh\`
+		    `,
+			options: [],
+		},
+		{
+			name: 'String concatenation with function call',
+			code: `
+			const foo = (): string => 'blah';
+			let f = 'bleh' + foo() + 'bleh'
+		    `,
+			options: [],
+		},
 	],
 	invalid: [
 		{
@@ -122,6 +187,14 @@ ruleTester.run('rule', rule, {
 			  f()
 			}
             `,
+			errors: [{ messageId: 'unused' }],
+		},
+		{
+			name: 'Async function is awaited and return value ignored',
+			code: `
+			const foo = (): Promise<number> => Promise.resolve(1);
+			await foo()
+		    `,
 			errors: [{ messageId: 'unused' }],
 		},
 	],
