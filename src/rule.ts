@@ -1,4 +1,4 @@
-import {AST_NODE_TYPES, ESLintUtils} from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 import {
 	ArrowFunctionExpression,
 	CallExpression,
@@ -8,8 +8,8 @@ import {
 	TSDeclareFunction,
 	TSEmptyBodyFunctionExpression,
 } from '@typescript-eslint/types/dist/generated/ast-spec';
-import {Definition, DefinitionType, Reference, Scope} from '@typescript-eslint/scope-manager';
-import {collect} from "./utils/collect";
+import { Definition, DefinitionType, Reference, Scope } from '@typescript-eslint/scope-manager';
+import { collect } from "./utils/collect";
 
 const createRule = ESLintUtils.RuleCreator(
 	(name) => `https://example.com/rule/${name}`,

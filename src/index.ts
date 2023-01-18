@@ -1,7 +1,9 @@
 import { rule } from './rule';
 
 const configuration = {
-	rules: [rule],
+	rules: {
+		'no-unused-return-value': rule
+	},
 };
 
 export = configuration;
