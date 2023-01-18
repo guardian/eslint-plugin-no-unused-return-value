@@ -25,7 +25,15 @@ const getCallExpression = (ref: Reference): CallExpression | undefined => {
 	}
 };
 
-const validUsageNodeTypes: AST_NODE_TYPES[] = [AST_NODE_TYPES.VariableDeclarator, AST_NODE_TYPES.ReturnStatement, AST_NODE_TYPES.BinaryExpression, AST_NODE_TYPES.TemplateLiteral, AST_NODE_TYPES.ArrowFunctionExpression, AST_NODE_TYPES.MemberExpression];
+const validUsageNodeTypes: AST_NODE_TYPES[] = [
+	AST_NODE_TYPES.VariableDeclarator,
+	AST_NODE_TYPES.ReturnStatement,
+	AST_NODE_TYPES.BinaryExpression,
+	AST_NODE_TYPES.TemplateLiteral,
+	AST_NODE_TYPES.ArrowFunctionExpression,
+	AST_NODE_TYPES.MemberExpression,
+	AST_NODE_TYPES.Property,
+];
 const isValidUsageNodeType = (type: AST_NODE_TYPES | undefined) => !!type && validUsageNodeTypes.includes(type);
 const isReturnValueUsed = (callExpr: CallExpression): boolean =>
 	callExpr.callee.type !== AST_NODE_TYPES.Identifier ||
