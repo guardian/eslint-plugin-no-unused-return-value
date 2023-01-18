@@ -3,6 +3,11 @@ import { rule } from './rule';
 
 const ruleTester = new ESLintUtils.RuleTester({
 	parser: '@typescript-eslint/parser',
+	parserOptions: {
+		ecmaFeatures: {
+			jsx: true,
+		},
+	}
 });
 
 /**
@@ -152,7 +157,19 @@ ruleTester.run('rule', rule, {
 			};
 			`,
 			options: [],
-		}
+		},
+		{
+			name: 'Return value of function used for JSX prop',
+			code: `
+			const Foo = ({ foo }) => {
+					return <div>{foo}</div>;
+			};
+			const bar = (): string => 'bar';
+
+			<Foo foo={bar()} />
+			`,
+			options: [],
+		},
 	],
 	invalid: [
 		{
