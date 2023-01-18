@@ -143,6 +143,16 @@ ruleTester.run('rule', rule, {
 		    `,
 			options: [],
 		},
+		{
+			name: 'Inline function used as object property value',
+			code: `
+			const foo = (): string => 'blah';
+			const bar = {
+				baz: foo(),
+			};
+			`,
+			options: [],
+		}
 	],
 	invalid: [
 		{
