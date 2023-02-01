@@ -33,6 +33,7 @@ const validUsageNodeTypes: AST_NODE_TYPES[] = [
 	AST_NODE_TYPES.ArrowFunctionExpression,
 	AST_NODE_TYPES.MemberExpression,
 	AST_NODE_TYPES.Property,
+	AST_NODE_TYPES.JSXExpressionContainer,
 ];
 const isValidUsageNodeType = (type: AST_NODE_TYPES | undefined) => !!type && validUsageNodeTypes.includes(type);
 const isReturnValueUsed = (callExpr: CallExpression): boolean =>
