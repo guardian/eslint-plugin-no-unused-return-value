@@ -92,43 +92,18 @@ ruleTester.run('rule', rule, {
 			options: [],
 		},
 		{
-			name: 'Function passed to Array.map',
+			name: 'FunctionA passed to FunctionB, and result of FunctionB is used',
 			code: `
 			const double = (n: number): number => n*2;
-			[1,2].map(double);
-		    `,
-			options: [],
-		},
-		{
-			name: 'Function called by a function passed to Array.map',
-			code: `
-			const double = (n: number): number => n*2;
-			[1,2].map(n => double(n));
-		    `,
-			options: [],
-		},
-		{
-			name: 'Function called in an expression by a function passed to Array.map',
-			code: `
-			const double = (n: number): number => n*2;
-			[1,2].map(n => 1 + double(n));
-		    `,
-			options: [],
+			const apply = (n: number, f: (n: number) => number): number => f(n);
+			const result = apply(2, double); 
+			`,
 		},
 		{
 			name: 'Async function is awaited and result assigned to variable',
 			code: `
 			const foo = (): Promise<number> => Promise.resolve(1);
 			let f = await foo()
-		    `,
-			options: [],
-		},
-		{
-			name: 'Call Promise.then on result of async function',
-			code: `
-			function foo(f: () => Promise<number>): void {
-			  f().then(n => console.log(n))
-			}
 		    `,
 			options: [],
 		},
@@ -169,6 +144,14 @@ ruleTester.run('rule', rule, {
 			<Foo foo={bar()} />
 			`,
 			options: [],
+		},
+		{
+			name: 'Result of Promise.then method call is used',
+			code: `
+			function foo(f: Promise<number>): Promise<void> {
+			    return f.then(n => n*2);
+			}
+			`,
 		},
 	],
 	invalid: [
@@ -222,6 +205,24 @@ ruleTester.run('rule', rule, {
 			const foo = (): Promise<number> => Promise.resolve(1);
 			await foo()
 		    `,
+			errors: [{ messageId: 'unused' }],
+		},
+		{
+			name: 'Result of Promise.then method call is not used',
+			code: `
+			function foo(f: Promise<number>) {
+			  f.then(n => n*2);
+			}
+			`,
+			errors: [{ messageId: 'unusedPromiseMethod' }],
+		},
+		{
+			name: 'FunctionA passed to FunctionB, and result of FunctionB is not used',
+			code: `
+			const double = (n: number): number => n*2;
+			const apply = (n: number, f: (n: number) => number): number => f(n);
+			apply(2, double); 
+			`,
 			errors: [{ messageId: 'unused' }],
 		},
 	],

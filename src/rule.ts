@@ -1,29 +1,26 @@
-import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
+import {AST_NODE_TYPES, ESLintUtils} from '@typescript-eslint/utils';
 import {
 	ArrowFunctionExpression,
 	CallExpression,
 	FunctionDeclaration,
 	FunctionExpression,
+	MemberExpression,
 	Node,
 	TSDeclareFunction,
 	TSEmptyBodyFunctionExpression,
 } from '@typescript-eslint/types/dist/generated/ast-spec';
-import { Definition, DefinitionType, Reference, Scope } from '@typescript-eslint/scope-manager';
-import { collect } from "./utils/collect";
+import {Definition, DefinitionType, Reference, Scope} from '@typescript-eslint/scope-manager';
+import {collect} from "./utils/collect";
 
 const createRule = ESLintUtils.RuleCreator(
 	(name) => `https://example.com/rule/${name}`,
 );
 
-const isFunctionCalled = (ref: Reference): boolean =>
-	ref.identifier.type === AST_NODE_TYPES.Identifier &&
-	ref.identifier.parent?.type === AST_NODE_TYPES.CallExpression;
-
-const getCallExpression = (ref: Reference): CallExpression | undefined => {
-	if (isFunctionCalled(ref)) {
-		return ref.identifier.parent as CallExpression;
-	}
-};
+const isFunctionCalled = (ref: Reference): boolean => {
+	const parent = ref.identifier.parent as CallExpression;
+	return parent.callee === ref.identifier &&
+		ref.identifier.parent?.type === AST_NODE_TYPES.CallExpression;
+}
 
 const validUsageNodeTypes: AST_NODE_TYPES[] = [
 	AST_NODE_TYPES.VariableDeclarator,
@@ -31,14 +28,11 @@ const validUsageNodeTypes: AST_NODE_TYPES[] = [
 	AST_NODE_TYPES.BinaryExpression,
 	AST_NODE_TYPES.TemplateLiteral,
 	AST_NODE_TYPES.ArrowFunctionExpression,
-	AST_NODE_TYPES.MemberExpression,
-	AST_NODE_TYPES.Property,
 	AST_NODE_TYPES.JSXExpressionContainer,
+	AST_NODE_TYPES.Property,	// property assignment
 ];
 const isValidUsageNodeType = (type: AST_NODE_TYPES | undefined) => !!type && validUsageNodeTypes.includes(type);
 const isReturnValueUsed = (callExpr: CallExpression): boolean =>
-	callExpr.callee.type !== AST_NODE_TYPES.Identifier ||
-	// If callee is Identifier, check the parent is valid:
 	isValidUsageNodeType(callExpr.parent?.type) ||
 	(callExpr.parent?.type === AST_NODE_TYPES.AwaitExpression && isValidUsageNodeType(callExpr.parent?.parent?.type));
 
@@ -81,45 +75,85 @@ const hasNonVoidReturnType = (node: FunctionNode): boolean =>
 		node.returnType.typeAnnotation.type !== AST_NODE_TYPES.TSVoidKeyword
 	);
 
+const isMemberExpressionNode = (node: Node): node is MemberExpression =>
+	node.type === AST_NODE_TYPES.MemberExpression;
+const isCallExpressionNode = (node: Node): node is CallExpression =>
+	node.type === AST_NODE_TYPES.CallExpression;
+
+// If ref is an identifier for an object and one of methodNames is being called then return the CallExpression
+const getCallExpressionForNamedMethod = (ref: Reference, methodNames: string[]): CallExpression | undefined => {
+	if (ref.identifier.type === AST_NODE_TYPES.Identifier && ref.identifier.parent) {
+		const parent = ref.identifier.parent;
+		if (isMemberExpressionNode(parent) && parent.parent && isCallExpressionNode(parent.parent)) {
+			if (parent.property.type === AST_NODE_TYPES.Identifier) {
+				if (methodNames.includes(parent.property.name)) {
+					return parent.parent;
+				}
+			}
+		}
+	}
+}
+
+// If ref is a function and is being called then return the CallExpression
+const getCallExpressionForFunction = (ref: Reference): CallExpression | undefined => {
+	if (isFunctionReference(ref) && isFunctionCalled(ref)) {
+		return ref.identifier.parent as CallExpression;
+	}
+};
+
+const isFunctionReference = (ref: Reference): boolean => {
+	if (ref.resolved) {
+		const functionNodes: FunctionNode[] = collect(ref.resolved.defs, def => {
+			const functionParameter = checkForParameterWhichIsAFunction(def);
+			if (functionParameter) {
+				return functionParameter
+			}
+
+			const variable = checkForVariableWithFunction(def);
+			if (variable) {
+				return variable;
+			}
+
+			if (isFunctionNode(def.node)) {
+				return def.node;
+			}
+		});
+
+		const nonVoidReturnFunctions = functionNodes.filter(
+			functionNode => hasNonVoidReturnType(functionNode)
+		);
+
+		// We'd only expect nonVoidReturnFunctions to have 0 or 1 elements at this point
+		return nonVoidReturnFunctions.length > 0;
+	}
+	return false;
+}
+
 export const rule = createRule({
 	create(context) {
 		const traverseScope = (scope: Scope): void => {
 			scope.childScopes.forEach((childScope) => traverseScope(childScope));
 
 			scope.references.map((ref) => {
-				if (ref.resolved) {
-					const functionNodes: FunctionNode[] = collect(ref.resolved.defs, def => {
-						const functionParameter = checkForParameterWhichIsAFunction(def);
-						if (functionParameter) {
-							return functionParameter
-						}
 
-						const variable = checkForVariableWithFunction(def);
-						if (variable) {
-							return variable;
-						}
-
-						if (isFunctionNode(def.node)) {
-							return def.node;
-						}
+				// Hardcode the handling of Promise.then + Promise.catch - it should always expect the value to be used.
+				// For other method calls, we cannot know the return type of the method without finding the class def - so this is unsupported for now.
+				const methodCallExpression = getCallExpressionForNamedMethod(ref, ['then', 'catch']);
+				if (methodCallExpression && !isReturnValueUsed(methodCallExpression)) {
+					context.report({
+						messageId: 'unusedPromiseMethod',
+						node: ref.identifier,
 					});
-
-					const nonVoidReturnFunctions = functionNodes.filter(
-						functionNode => hasNonVoidReturnType(functionNode)
-					);
-
-					// We'd only expect nonVoidReturnFunctions to have 0 or 1 elements at this point
-					if (nonVoidReturnFunctions.length > 0) {
-						const maybeCallExpression = getCallExpression(ref);
-						if (
-							maybeCallExpression &&
-							!isReturnValueUsed(maybeCallExpression)
-						) {
-							context.report({
-								messageId: 'unused',
-								node: ref.identifier,
-							});
-						}
+				} else {
+					const functionCallExpression = getCallExpressionForFunction(ref);
+					if (
+						functionCallExpression &&
+						!isReturnValueUsed(functionCallExpression)
+					) {
+						context.report({
+							messageId: 'unused',
+							node: ref.identifier,
+						});
 					}
 				}
 			});
@@ -140,6 +174,7 @@ export const rule = createRule({
 		},
 		messages: {
 			unused: 'Use the return value',
+			unusedPromiseMethod: 'Use the returned Promise'
 		},
 		type: 'suggestion',
 		schema: [],
