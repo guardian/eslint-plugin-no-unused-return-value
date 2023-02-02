@@ -16,9 +16,11 @@ const createRule = ESLintUtils.RuleCreator(
 	(name) => `https://example.com/rule/${name}`,
 );
 
-const isFunctionCalled = (ref: Reference): boolean =>
-	ref.identifier.type === AST_NODE_TYPES.Identifier &&
-	ref.identifier.parent?.type === AST_NODE_TYPES.CallExpression;
+const isFunctionCalled = (ref: Reference): boolean => {
+	const parent = ref.identifier.parent as CallExpression;
+	return parent.callee === ref.identifier &&
+		ref.identifier.parent?.type === AST_NODE_TYPES.CallExpression;
+}
 
 const validUsageNodeTypes: AST_NODE_TYPES[] = [
 	AST_NODE_TYPES.VariableDeclarator,
